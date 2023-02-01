@@ -99,9 +99,28 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
+	entry, err := DvlsClient.GetEntry(dvlsSecret.Spec.EntryID)
+	if err != nil {
+		log.Error(err, "unable to fetch dvls entry", "entryId", dvlsSecret.Spec.EntryID)
+		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch entry on DVLS instance"})
+		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
+			log.Error(err, "Failed to update DvlsSecret status")
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if entry.ConnectionType != dvls.ServerConnectionCredential || entry.ConnectionSubType != dvls.ServerConnectionSubTypeDefault {
+		log.Error(err, "entry type not supported, only username/password entries are supported", "entryId", dvlsSecret.Spec.EntryID, "entryType", entry.ConnectionType, "entrySubType", entry.ConnectionSubType)
+		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Entry type not supported, only username/password entries are supported"})
+		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
+			log.Error(err, "Failed to update DvlsSecret status")
+		}
+		return ctrl.Result{}, nil
+	}
+
 	secret, err := DvlsClient.GetSecret(dvlsSecret.Spec.EntryID)
 	if err != nil {
-		log.Error(err, "unable to fetch dvls secret", "entry-id", dvlsSecret.Spec.EntryID)
+		log.Error(err, "unable to fetch dvls secret", "entryId", dvlsSecret.Spec.EntryID)
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch secret on DVLS instance"})
 		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
 			log.Error(err, "Failed to update DvlsSecret status")
