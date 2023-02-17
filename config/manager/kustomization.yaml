@@ -4,5 +4,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
 - name: controller
-  newName: devolutions/devolutions-kubernetes-operator
+  newName: devolutions/dvls-kubernetes-operator
   newTag: latest

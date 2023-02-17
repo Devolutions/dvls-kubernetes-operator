@@ -4,8 +4,8 @@ layout:
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
-projectName: devolutions-kubernetes-operator
-repo: github.com/Devolutions/devolutions-kubernetes-operator
+projectName: dvls-kubernetes-operator
+repo: github.com/Devolutions/dvls-kubernetes-operator
 resources:
 - api:
     crdVersion: v1
@@ -14,6 +14,6 @@ resources:
   domain: devolutions.com
   group: dvls
   kind: DvlsSecret
-  path: github.com/Devolutions/devolutions-kubernetes-operator/api/v1alpha1
+  path: github.com/Devolutions/dvls-kubernetes-operator/api/v1alpha1
   version: v1alpha1
 version: "3"
