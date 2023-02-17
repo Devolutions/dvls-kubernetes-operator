@@ -1,4 +1,4 @@
-module github.com/Devolutions/devolutions-kubernetes-operator
+module github.com/Devolutions/dvls-kubernetes-operator
 
 go 1.19
 

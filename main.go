@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dvlsv1alpha1 "github.com/Devolutions/devolutions-kubernetes-operator/api/v1alpha1"
-	"github.com/Devolutions/devolutions-kubernetes-operator/controllers"
+	dvlsv1alpha1 "github.com/Devolutions/dvls-kubernetes-operator/api/v1alpha1"
+	"github.com/Devolutions/dvls-kubernetes-operator/controllers"
 	"github.com/Devolutions/go-dvls"
 	//+kubebuilder:scaffold:imports
 )

@@ -30,7 +30,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dvlsv1alpha1 "github.com/Devolutions/devolutions-kubernetes-operator/api/v1alpha1"
+	dvlsv1alpha1 "github.com/Devolutions/dvls-kubernetes-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
 

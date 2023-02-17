@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: service
     app.kubernetes.io/instance: ctrl-mgr-metrics-service
     app.kubernetes.io/component: kube-rbac-proxy
-    app.kubernetes.io/created-by: devolutions-kubernetes-operator
-    app.kubernetes.io/part-of: devolutions-kubernetes-operator
+    app.kubernetes.io/created-by: dvls-kubernetes-operator
+    app.kubernetes.io/part-of: dvls-kubernetes-operator
     app.kubernetes.io/managed-by: kustomize
   name: ctrl-mgr-metrics-service
   namespace: system
