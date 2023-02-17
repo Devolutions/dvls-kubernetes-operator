@@ -1,8 +1,32 @@
 # dvls-kubernetes-operator
-// TODO(user): Add simple overview of use/purpose
+:warning: **This operator is a work in progress, expect breaking changes between releases** :warning:
+
+Operator to sync Devolutions Server `Credential Entry - Username / Password` entries as Kubernetes Secrets
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+This operator uses the defined custom resource DvlsSecret which manages its own Kubernetes Secret and will keep itself up to date at a defined interval (every minute by default).
+The Docker image can be found [here](https://hub.docker.com/r/devolutions/dvls-kubernetes-operator).
+
+### Operator configuration
+The following Environment Variables can be used to configure the operator :
+- `DEVO_OPERATOR_DVLS_BASEURI` (required) - DVLS instance base URI
+- `DEVO_OPERATOR_DVLS_APPID` (required) - DVLS Application ID
+- `DEVO_OPERATOR_DVLS_APPSECRET` (required) - DVLS Application Secret
+- `DEVO_OPERATOR_REQUEUE_DURATION` (optional) - Entry/Secret resync interval (default 60s). Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+A sample of the custom resource can be found [here](https://github.com/Devolutions/dvls-kubernetes-operator/blob/master/config/samples/dvls_v1alpha1_dvlssecret.yaml).
+The entry ID can be fetched by going in the entry properties, `Advanced -> Session ID`.
+
+### Devolutions Server configuration
+We recommend creating an [Application ID](https://helpserver.devolutions.net/webinterface_applications.html?q=application) specifically to be used with the Operator that has [minimal access to a vault](https://helpserver.devolutions.net/vaults_applications.html?q=application) that only contains the secrets to be synchronized.
+
+Only `Credential Entry - Username / Password` entries are supported at the moment. The following entry data is available per secret :
+- entry name
+- username
+- password
+
+### Kubernetes configuration
+Since this operator uses Kubernetes Secrets, it is recommended that you follow [best practices](https://kubernetes.io/docs/concepts/security/secrets-good-practices/) surrounding secrets, especially [encryption at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -42,7 +66,6 @@ make undeploy
 ```
 
 ## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
 
 ### How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)

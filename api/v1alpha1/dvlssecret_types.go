@@ -29,8 +29,6 @@ type DvlsSecretSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	EntryID string `json:"entryId"` // entry id on dvls
-	// SecretName string `json:"secretName"` // secret name on kubernetes
-	// Namespace  string `json:"namespace"`  // secret namespace on kubernetes
 }
 
 // DvlsSecretStatus defines the observed state of DvlsSecret
