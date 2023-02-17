@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -87,8 +86,9 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("failed to get DvlsSecret object, %w", err)
 	}
 
-	if dvlsSecret.Status.Conditions == nil || len(dvlsSecret.Status.Conditions) == 0 {
+	if dvlsSecret.Status.Conditions == nil || len(dvlsSecret.Status.Conditions) == 0 || dvlsSecret.Status.EntryModifiedDate.IsZero() {
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusAvailableDvlsSecret, Status: v1.ConditionUnknown, Reason: "Reconciling"})
+		dvlsSecret.Status.EntryModifiedDate = v1.Date(0001, time.January, 1, 1, 1, 1, 1, time.UTC)
 		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update DvlsSecret status, %w", err)
 		}
@@ -118,7 +118,26 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	secret, err := DvlsClient.GetSecret(dvlsSecret.Spec.EntryID)
+	kSecret := &corev1.Secret{}
+	err = r.Get(ctx, req.NamespacedName, kSecret)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, fmt.Errorf("failed to get kubernetes secret object, %w", err)
+	}
+	kSecretNotFound := apierrors.IsNotFound(err)
+
+	var entryTime, secretTime time.Time
+	if !dvlsSecret.Status.EntryModifiedDate.IsZero() && entry.ModifiedDate != nil {
+		secretTime = dvlsSecret.Status.EntryModifiedDate.Time
+		entryTime = entry.ModifiedDate.Time
+	}
+
+	if entryTime.Equal(secretTime) && !kSecretNotFound {
+		return ctrl.Result{
+			RequeueAfter: RequeueDuration,
+		}, nil
+	}
+
+	secret, err := DvlsClient.GetEntryCredentialsPassword(entry)
 	if err != nil {
 		log.Error(err, "unable to fetch dvls secret", "entryId", dvlsSecret.Spec.EntryID)
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch secret on DVLS instance"})
@@ -129,34 +148,32 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	secretMap := make(map[string]string)
 	secretMap["entry-id"] = secret.ID
-	secretMap["username"] = secret.Username
-	secretMap["password"] = secret.Password
+	secretMap["entry-name"] = secret.EntryName
+	secretMap["username"] = secret.Credentials.Username
+	if secret.Credentials.Password != nil {
+		secretMap["password"] = *secret.Credentials.Password
+	}
 
-	kSecret := &corev1.Secret{}
-	err = r.Get(ctx, req.NamespacedName, kSecret)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			log.Info("Kubernetes secret not found, creating")
-			kSecret.ObjectMeta = v1.ObjectMeta{
-				Name:      req.Name,
-				Namespace: req.Namespace,
-			}
-			err := ctrl.SetControllerReference(dvlsSecret, kSecret, r.Scheme)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to set kubernetes secret owner, %w", err)
-			}
-
-			kSecret.Type = corev1.SecretType(dvlsSecretType)
-			kSecret.StringData = secretMap
-
-			err = r.Create(ctx, kSecret)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to create kubernetes secret, %w", err)
-			}
-
-			return ctrl.Result{}, nil
+	if kSecretNotFound {
+		log.Info("Kubernetes secret not found, creating")
+		kSecret.ObjectMeta = v1.ObjectMeta{
+			Name:      req.Name,
+			Namespace: req.Namespace,
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get kubernetes secret object, %w", err)
+		err := ctrl.SetControllerReference(dvlsSecret, kSecret, r.Scheme)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to set kubernetes secret owner, %w", err)
+		}
+
+		kSecret.Type = corev1.SecretType(dvlsSecretType)
+		kSecret.StringData = secretMap
+
+		err = r.Create(ctx, kSecret)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create kubernetes secret, %w", err)
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	var owned bool
@@ -171,23 +188,21 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("found existing kubernetes secret with name %s in namespace %s but is either not the correct type or not owned by the DvlsSecret resource. Either delete the existing secret or use a different name", kSecret.GetName(), kSecret.GetNamespace())
 	}
 
-	kSecretDataMapString := make(map[string]string)
-	for k, v := range kSecret.Data {
-		kSecretDataMapString[k] = string(v)
+	kSecret.StringData = secretMap
+	err = r.Update(ctx, kSecret)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get update kubernetes secret object, %w", err)
 	}
-
-	if !reflect.DeepEqual(kSecretDataMapString, secretMap) {
-		kSecret.StringData = secretMap
-		err := r.Update(ctx, kSecret)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to get update kubernetes secret object, %w", err)
-		}
-
-		log.Info("updated secret")
+	log.Info("updated secret")
+	err = r.Get(ctx, req.NamespacedName, dvlsSecret)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get DvlsSecret object, %w", err)
 	}
 
 	meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusAvailableDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling"})
 	meta.RemoveStatusCondition(&dvlsSecret.Status.Conditions, statusDegradedDvlsSecret)
+	dvlsSecret.Status.EntryModifiedDate = v1.NewTime(entryTime)
+
 	if err := r.Status().Update(ctx, dvlsSecret); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update DvlsSecret status, %w", err)
 	}

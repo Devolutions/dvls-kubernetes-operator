@@ -117,14 +117,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	dvlsClient, dvlsUser, err := dvls.NewClient(appId, appSecret, dvlsBaseUri)
+	dvlsClient, err := dvls.NewClient(appId, appSecret, dvlsBaseUri)
 	if err != nil {
 		setupLog.Error(err, "unable to set up dvls client")
 		os.Exit(1)
 	}
 
-	if dvlsUser.UserType != dvls.UserAuthenticationApplication {
-		setupLog.Error(nil, "provided credentials are not for an Application user type", "userType", dvlsUser.UserType)
+	if dvlsClient.ClientUser.UserType != dvls.UserAuthenticationApplication {
+		setupLog.Error(nil, "provided credentials are not for an Application user type", "userType", dvlsClient.ClientUser.UserType)
 		os.Exit(1)
 	}
 
