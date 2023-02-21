@@ -101,6 +101,6 @@ spec:
             valueFrom:
               secretKeyRef:
                 key: secret
-                name: appid
+                name: instance-secret
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
