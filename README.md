@@ -32,6 +32,18 @@ Since this operator uses Kubernetes Secrets, it is recommended that you follow [
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
+### Helm Chart
+An Helm Chart is available to simplify installation, just add our helm chart repository, create a `values.yaml` from [the default values](https://github.com/Devolutions/dvls-kubernetes-operator/blob/master/chart/values.yaml) as a baseline and update values as necessary. Run `helm install` and add your `values.yaml`.
+The following values should be updated from your `values.yaml`
+- controllerManager.manager.env.devoOperatorDvlsBaseuri
+- controllerManager.manager.env.devoOperatorDvlsAppid
+- instanceSecret.secret
+```sh
+helm repo add devolutions-helm-charts https://devolutions.github.io/helm-charts
+helm repo update
+helm install dvls-kubernetes-operator devolutions-helm-charts/dvls-kubernetes-operator --values values.yaml
+```
+
 ### Running on the cluster
 1. Install Instances of Custom Resources:
 
