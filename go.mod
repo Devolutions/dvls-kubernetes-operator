@@ -3,7 +3,7 @@ module github.com/Devolutions/dvls-kubernetes-operator
 go 1.19
 
 require (
-	github.com/Devolutions/go-dvls v0.4.0
+	github.com/Devolutions/go-dvls v0.4.1
 	github.com/onsi/ginkgo/v2 v2.4.0
 	github.com/onsi/gomega v1.23.0
 	k8s.io/api v0.26.1
