@@ -1,0 +1,32 @@
+name: build-container
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    environment: container-build
+
+    steps:
+      - name: Check out devolutions/dvls-kubernetes-operator
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: devolutionsbot
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: devolutions/dvls-kubernetes-operator:latest
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
