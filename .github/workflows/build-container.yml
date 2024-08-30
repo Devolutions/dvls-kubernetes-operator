@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+  schedule:
+    - cron: '34 13 * * 1' # Monday 9:34 AM EDT
 
 jobs:
   build-image:
