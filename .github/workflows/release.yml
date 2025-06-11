@@ -1,0 +1,35 @@
+name: release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - Makefile
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out ${{ github.repository }}
+        uses: actions/checkout@v4
+
+      - name: Check out Devolutions/actions
+        uses: actions/checkout@v4
+        with:
+          repository: Devolutions/actions
+          ref: v1
+          token: ${{ secrets.DEVOLUTIONSBOT_TOKEN }}
+          path: ./.github/workflows
+
+      - name: Set version
+        id: get-version
+        run: echo "version=$(grep -E '^VERSION[[:space:]]*\?=' Makefile | awk -F'= ' '{print $2}' | tr -d ' ')" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: ./.github/workflows/create-release
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.get-version.outputs.version }}
