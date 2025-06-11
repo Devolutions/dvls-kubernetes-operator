@@ -92,7 +92,7 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}
 
-	entry, err := DvlsClient.GetEntry(dvlsSecret.Spec.EntryID)
+	entry, err := DvlsClient.Entries.Credential.GetById(dvlsSecret.Spec.VaultID, dvlsSecret.Spec.EntryID)
 	if err != nil {
 		log.Error(err, "unable to fetch dvls entry", "entryId", dvlsSecret.Spec.EntryID)
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch entry on DVLS instance"})
@@ -102,8 +102,8 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	if entry.ConnectionType != dvls.ServerConnectionCredential || entry.ConnectionSubType != dvls.ServerConnectionSubTypeDefault {
-		log.Error(err, "entry type not supported, only username/password entries are supported", "entryId", dvlsSecret.Spec.EntryID, "entryType", entry.ConnectionType, "entrySubType", entry.ConnectionSubType)
+	if entry.Type != string(dvls.ServerConnectionCredential) || entry.SubType != string(dvls.ServerConnectionSubTypeDefault) {
+		log.Error(err, "entry type not supported, only username/password entries are supported", "entryId", dvlsSecret.Spec.EntryID, "entryType", entry.Type, "entrySubType", entry.SubType)
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Entry type not supported, only username/password entries are supported"})
 		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
 			log.Error(err, "Failed to update DvlsSecret status")
@@ -119,9 +119,9 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	kSecretNotFound := apierrors.IsNotFound(err)
 
 	var entryTime, secretTime time.Time
-	if !dvlsSecret.Status.EntryModifiedDate.IsZero() && entry.ModifiedDate != nil {
+	if !dvlsSecret.Status.EntryModifiedDate.IsZero() && entry.ModifiedOn != nil {
 		secretTime = dvlsSecret.Status.EntryModifiedDate.Time
-		entryTime = entry.ModifiedDate.Time
+		entryTime = entry.ModifiedOn.Time
 	}
 
 	if entryTime.Equal(secretTime) && !kSecretNotFound {
@@ -130,21 +130,19 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}, nil
 	}
 
-	secret, err := DvlsClient.GetEntryCredentialsPassword(entry)
-	if err != nil {
-		log.Error(err, "unable to fetch dvls secret", "entryId", dvlsSecret.Spec.EntryID)
-		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch secret on DVLS instance"})
-		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
-			log.Error(err, "Failed to update DvlsSecret status")
-		}
-		return ctrl.Result{}, nil
+	defaultData, ok := entry.GetCredentialDefaultData()
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf(
+			"failed to extract credential data for entry ID %s: unsupported or unexpected entry type (type: %s, subtype: %s)",
+			dvlsSecret.Spec.EntryID, entry.Type, entry.SubType)
 	}
+
 	secretMap := make(map[string]string)
-	secretMap["entry-id"] = secret.ID
-	secretMap["entry-name"] = secret.EntryName
-	secretMap["username"] = secret.Credentials.Username
-	if secret.Credentials.Password != nil {
-		secretMap["password"] = *secret.Credentials.Password
+	secretMap["entry-id"] = entry.Id
+	secretMap["entry-name"] = entry.Name
+	secretMap["username"] = defaultData.Username
+	if defaultData.Password != "" {
+		secretMap["password"] = defaultData.Password
 	}
 
 	if kSecretNotFound {
