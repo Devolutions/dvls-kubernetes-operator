@@ -128,11 +128,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if dvlsClient.ClientUser.UserType != dvls.UserAuthenticationApplication {
-		setupLog.Error(nil, "provided credentials are not for an Application user type", "userType", dvlsClient.ClientUser.UserType)
-		os.Exit(1)
-	}
-
 	requeueDurationString := os.Getenv("DEVO_OPERATOR_REQUEUE_DURATION")
 	if requeueDurationString != "" {
 		requeueDuration, err := time.ParseDuration(requeueDurationString)

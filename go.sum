@@ -1,5 +1,5 @@
-github.com/Devolutions/go-dvls v0.4.1 h1:2euUdRYFF54/VJRiGZ/toSXhwursngsJvkwbbp/Groc=
-github.com/Devolutions/go-dvls v0.4.1/go.mod h1:LWmMkJugG1/aUH5oXwHN13EvJC+YhvyKH/11pPecPtw=
+github.com/Devolutions/go-dvls v0.12.2 h1:7qptA5gw8JVtEJuTBmfDHOFfkGY6XMRobvg6InIEa+4=
+github.com/Devolutions/go-dvls v0.12.2/go.mod h1:4O3lb/RK1P1cDwU5auVi7CM4gRER7EuwyLwMVuEZjgg=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
