@@ -30,3 +30,11 @@ jobs:
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
+
+      - name: Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: devolutions/dvls-kubernetes-operator:latest
+          only-severities: critical,high
+          summary: true
