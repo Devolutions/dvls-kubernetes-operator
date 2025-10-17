@@ -12,6 +12,6 @@ spec:
   type: {{ .Values.ctrlMgrMetricsService.type }}
   selector:
     control-plane: controller-manager
-  {{- include "chart.selectorLabels" . | nindent 4 }}
+    {{- include "chart.selectorLabels" . | nindent 4 }}
   ports:
-	{{- .Values.ctrlMgrMetricsService.ports | toYaml | nindent 2 -}}
+  {{- .Values.ctrlMgrMetricsService.ports | toYaml | nindent 2 }}

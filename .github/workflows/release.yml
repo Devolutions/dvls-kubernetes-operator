@@ -1,16 +1,13 @@
 name: release
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - Makefile
   workflow_dispatch:
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
 
     steps:
       - name: Check out ${{ github.repository }}
@@ -33,3 +30,40 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: v${{ steps.get-version.outputs.version }}
+
+  build-image:
+    runs-on: ubuntu-latest
+    needs: create-release
+    environment: container-build
+
+    steps:
+      - name: Check out devolutions/dvls-kubernetes-operator
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: devolutionsbot
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            devolutions/dvls-kubernetes-operator:latest
+            devolutions/dvls-kubernetes-operator:${{ needs.create-release.outputs.version }}
+
+      - name: Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: devolutions/dvls-kubernetes-operator:latest
+          ignore-base: true
+          only-severities: critical,high
+          summary: true
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
