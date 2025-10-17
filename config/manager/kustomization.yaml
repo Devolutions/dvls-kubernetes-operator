@@ -6,4 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: devolutions/dvls-kubernetes-operator
-  newTag: latest
+  newTag: 0.2.1

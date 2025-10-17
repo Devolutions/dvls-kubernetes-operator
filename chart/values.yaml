@@ -1,5 +1,15 @@
 controllerManager:
   kubeRbacProxy:
+    args:
+    - --secure-listen-address=0.0.0.0:8443
+    - --upstream=http://127.0.0.1:8080/
+    - --logtostderr=true
+    - --v=0
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
       tag: v0.13.0
@@ -11,20 +21,35 @@ controllerManager:
         cpu: 5m
         memory: 64Mi
   manager:
+    args:
+    - --health-probe-bind-address=:8081
+    - --metrics-bind-address=127.0.0.1:8080
+    - --leader-elect
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
     env:
-      devoOperatorDvlsAppid: ""
-      devoOperatorDvlsBaseuri: ""
+      devoOperatorDvlsAppid: 00000000-0000-0000-0000-000000000000
+      devoOperatorDvlsBaseuri: https://your-dvls-instance.com
       devoOperatorRequeueDuration: 60s
     image:
       repository: devolutions/dvls-kubernetes-operator
-      tag: ""
+      tag: 0.2.1
     resources:
       limits:
         memory: 128Mi
       requests:
         cpu: 100m
         memory: 64Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   replicas: 1
+  serviceAccount:
+    annotations: {}
 ctrlMgrMetricsService:
   ports:
   - name: https
