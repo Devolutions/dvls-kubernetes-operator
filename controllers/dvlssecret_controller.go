@@ -79,7 +79,7 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, fmt.Errorf("failed to get DvlsSecret object, %w", err)
 	}
 
-	if dvlsSecret.Status.Conditions == nil || len(dvlsSecret.Status.Conditions) == 0 || dvlsSecret.Status.EntryModifiedDate.IsZero() {
+	if len(dvlsSecret.Status.Conditions) == 0 || dvlsSecret.Status.EntryModifiedDate.IsZero() {
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusAvailableDvlsSecret, Status: v1.ConditionUnknown, Reason: "Reconciling"})
 		dvlsSecret.Status.EntryModifiedDate = v1.Date(0001, time.January, 1, 1, 1, 1, 1, time.UTC)
 		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
@@ -96,15 +96,6 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err != nil {
 		log.Error(err, "unable to fetch dvls entry", "entryId", dvlsSecret.Spec.EntryID)
 		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Unable to fetch entry on DVLS instance"})
-		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
-			log.Error(err, "Failed to update DvlsSecret status")
-		}
-		return ctrl.Result{}, nil
-	}
-
-	if entry.Type != string(dvls.ServerConnectionCredential) || entry.SubType != string(dvls.ServerConnectionSubTypeDefault) {
-		log.Error(err, "entry type not supported, only username/password entries are supported", "entryId", dvlsSecret.Spec.EntryID, "entryType", entry.Type, "entrySubType", entry.SubType)
-		meta.SetStatusCondition(&dvlsSecret.Status.Conditions, v1.Condition{Type: statusDegradedDvlsSecret, Status: v1.ConditionTrue, Reason: "Reconciling", Message: "Entry type not supported, only username/password entries are supported"})
 		if err := r.Status().Update(ctx, dvlsSecret); err != nil {
 			log.Error(err, "Failed to update DvlsSecret status")
 		}
@@ -130,19 +121,9 @@ func (r *DvlsSecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}, nil
 	}
 
-	defaultData, ok := entry.GetCredentialDefaultData()
-	if !ok {
-		return ctrl.Result{}, fmt.Errorf(
-			"failed to extract credential data for entry ID %s: unsupported or unexpected entry type (type: %s, subtype: %s)",
-			dvlsSecret.Spec.EntryID, entry.Type, entry.SubType)
-	}
-
-	secretMap := make(map[string]string)
-	secretMap["entry-id"] = entry.Id
-	secretMap["entry-name"] = entry.Name
-	secretMap["username"] = defaultData.Username
-	if defaultData.Password != "" {
-		secretMap["password"] = defaultData.Password
+	secretMap, err := setSecretMap(entry)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to set secret map, %w", err)
 	}
 
 	if kSecretNotFound {
@@ -209,4 +190,88 @@ func (r *DvlsSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&dvlsv1alpha1.DvlsSecret{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
+}
+
+func setSecretMap(entry dvls.Entry) (map[string]string, error) {
+	secretMap := make(map[string]string)
+	secretMap["entry-id"] = entry.Id
+	secretMap["entry-name"] = entry.Name
+
+	switch entry.SubType {
+	case dvls.EntryCredentialSubTypeDefault:
+		if data, ok := entry.GetCredentialDefaultData(); ok {
+			if data.Username != "" {
+				secretMap["username"] = data.Username
+			}
+			if data.Password != "" {
+				secretMap["password"] = data.Password
+			}
+			if data.Domain != "" {
+				secretMap["domain"] = data.Domain
+			}
+		}
+
+	case dvls.EntryCredentialSubTypeAccessCode:
+		if data, ok := entry.GetCredentialAccessCodeData(); ok {
+			if data.Password != "" {
+				secretMap["password"] = data.Password
+			}
+		}
+
+	case dvls.EntryCredentialSubTypeApiKey:
+		if data, ok := entry.GetCredentialApiKeyData(); ok {
+			if data.ApiId != "" {
+				secretMap["api-id"] = data.ApiId
+			}
+			if data.ApiKey != "" {
+				secretMap["api-key"] = data.ApiKey
+			}
+			if data.TenantId != "" {
+				secretMap["tenant-id"] = data.TenantId
+			}
+		}
+
+	case dvls.EntryCredentialSubTypeAzureServicePrincipal:
+		if data, ok := entry.GetCredentialAzureServicePrincipalData(); ok {
+			if data.ClientId != "" {
+				secretMap["client-id"] = data.ClientId
+			}
+			if data.ClientSecret != "" {
+				secretMap["client-secret"] = data.ClientSecret
+			}
+			if data.TenantId != "" {
+				secretMap["tenant-id"] = data.TenantId
+			}
+		}
+
+	case dvls.EntryCredentialSubTypeConnectionString:
+		if data, ok := entry.GetCredentialConnectionStringData(); ok {
+			if data.ConnectionString != "" {
+				secretMap["connection-string"] = data.ConnectionString
+			}
+		}
+
+	case dvls.EntryCredentialSubTypePrivateKey:
+		if data, ok := entry.GetCredentialPrivateKeyData(); ok {
+			if data.Username != "" {
+				secretMap["username"] = data.Username
+			}
+			if data.Password != "" {
+				secretMap["password"] = data.Password
+			}
+			if data.PrivateKey != "" {
+				secretMap["private-key"] = data.PrivateKey
+			}
+			if data.PublicKey != "" {
+				secretMap["public-key"] = data.PublicKey
+			}
+			if data.Passphrase != "" {
+				secretMap["passphrase"] = data.Passphrase
+			}
+		}
+	default:
+		return nil, fmt.Errorf("unsupported credential subtype: %s", entry.SubType)
+	}
+
+	return secretMap, nil
 }
