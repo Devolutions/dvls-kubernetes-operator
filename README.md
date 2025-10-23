@@ -1,7 +1,7 @@
 # dvls-kubernetes-operator
 :warning: **This operator is a work in progress, expect breaking changes between releases** :warning:
 
-Operator to sync Devolutions Server `Credential Entry - Username / Password` entries as Kubernetes Secrets
+Operator to sync Devolutions Server `Credential Entry` entries as Kubernetes Secrets
 
 ## Description
 This operator uses the defined custom resource DvlsSecret which manages its own Kubernetes Secret and will keep itself up to date at a defined interval (every minute by default).
@@ -13,6 +13,7 @@ The following Environment Variables can be used to configure the operator :
 - `DEVO_OPERATOR_DVLS_APPID` (required) - DVLS Application ID
 - `DEVO_OPERATOR_DVLS_APPSECRET` (required) - DVLS Application Secret
 - `DEVO_OPERATOR_REQUEUE_DURATION` (optional) - Entry/Secret resync interval (default 60s). Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+- `SSL_CERT_FILE` (optional) - Path to a custom CA certificate file for DVLS servers with self-signed certificates. This is automatically set by the Helm chart when `instanceSecret.caCert` is provided.
 
 A sample of the custom resource can be found [here](https://github.com/Devolutions/dvls-kubernetes-operator/blob/master/config/samples/dvls_v1alpha1_dvlssecret.yaml).
 The entry ID can be fetched by going in the entry properties, `Advanced -> Session ID`.
@@ -20,10 +21,7 @@ The entry ID can be fetched by going in the entry properties, `Advanced -> Sessi
 ### Devolutions Server configuration
 We recommend creating an [Application ID](https://helpserver.devolutions.net/webinterface_applications.html?q=application) specifically to be used with the Operator that has [minimal access to a vault](https://helpserver.devolutions.net/vaults_applications.html?q=application) that only contains the secrets to be synchronized.
 
-Only `Credential Entry - Username / Password` entries are supported at the moment. The following entry data is available per secret :
-- entry name
-- username
-- password
+Only `Credential Entry` entries are supported at the moment. The available entry data will depend on the `Credential Entry` type.
 
 ### Kubernetes configuration
 Since this operator uses Kubernetes Secrets, it is recommended that you follow [best practices](https://kubernetes.io/docs/concepts/security/secrets-good-practices/) surrounding secrets, especially [encryption at rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/).
@@ -33,15 +31,71 @@ You’ll need a Kubernetes cluster to run against. You can use [KIND](https://si
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Helm Chart
-An Helm Chart is available to simplify installation, just add our helm chart repository, create a `values.yaml` from [the default values](https://github.com/Devolutions/dvls-kubernetes-operator/blob/master/chart/values.yaml) as a baseline and update values as necessary. Run `helm install` and add your `values.yaml`.
-The following values should be updated from your `values.yaml`
-- controllerManager.manager.env.devoOperatorDvlsBaseuri
-- controllerManager.manager.env.devoOperatorDvlsAppid
-- instanceSecret.secret
+A Helm Chart is available to simplify installation. Add the Devolutions Helm chart repository, create a `values.yaml` from [the default values](https://github.com/Devolutions/dvls-kubernetes-operator/blob/master/chart/values.yaml) as a baseline, and update values as necessary.
+
+#### Required Configuration
+The following values **must** be configured in your `values.yaml`:
+- `controllerManager.manager.env.devoOperatorDvlsBaseuri` - Your DVLS server URL (e.g., `https://dvls.example.com`)
+- `controllerManager.manager.env.devoOperatorDvlsAppid` - Application ID from your DVLS server
+- `instanceSecret.secret` - Application Secret from your DVLS server
+
+#### Optional Configuration
+- `instanceSecret.caCert` - Custom CA certificate for self-signed DVLS servers (see below)
+- `controllerManager.manager.env.devoOperatorRequeueDuration` - How often to sync secrets (default: `60s`)
+
+#### Basic Example Configuration
+
+Create a `values.yaml` file with your DVLS configuration:
+
+```yaml
+controllerManager:
+  manager:
+    env:
+      devoOperatorDvlsAppid: "00000000-0000-0000-0000-000000000000"
+      devoOperatorDvlsBaseuri: "https://dvls.example.com"
+      devoOperatorRequeueDuration: "60s"
+
+instanceSecret:
+  secret: "your-app-secret-here"
+```
+
+#### Installation
 ```sh
 helm repo add devolutions-helm-charts https://devolutions.github.io/helm-charts
 helm repo update
 helm install dvls-kubernetes-operator devolutions-helm-charts/dvls-kubernetes-operator --values values.yaml
+```
+
+#### Using a Custom CA Certificate
+
+If your DVLS server uses a self-signed certificate (common in test/development environments), you need to provide the CA certificate so the operator can establish a trusted TLS connection.
+
+**When to use this:**
+- Testing with self-signed certificates
+- Internal CA certificates not in the system trust store
+- Development/staging environments with custom PKI
+
+**Configuration:**
+
+Add the CA certificate content to your `values.yaml`:
+
+```yaml
+controllerManager:
+  manager:
+    env:
+      devoOperatorDvlsAppid: "00000000-0000-0000-0000-000000000000"
+      devoOperatorDvlsBaseuri: "https://dvls.example.com"
+      devoOperatorRequeueDuration: "60s"
+
+instanceSecret:
+  secret: "your-app-secret"
+  # Add your CA certificate here (PEM format)
+  caCert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDXTCCAkWgAwIBAgIJAKZ...
+    (your CA certificate content)
+    ...
+    -----END CERTIFICATE-----
 ```
 
 ### Running on the cluster

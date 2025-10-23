@@ -36,7 +36,7 @@ controllerManager:
       devoOperatorRequeueDuration: 60s
     image:
       repository: devolutions/dvls-kubernetes-operator
-      tag: 0.2.1
+      tag: 0.3.0
     resources:
       limits:
         memory: 128Mi

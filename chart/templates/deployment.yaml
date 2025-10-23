@@ -43,6 +43,10 @@ spec:
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
+        {{- if .Values.instanceSecret.caCert }}
+        - name: SSL_CERT_FILE
+          value: /etc/dvls-ca-cert/ca.crt
+        {{- end }}
         image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag
           | default .Chart.AppVersion }}
         name: kube-rbac-proxy
@@ -73,6 +77,10 @@ spec:
               name: {{ include "chart.fullname" . }}-instance-secret
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ quote .Values.kubernetesClusterDomain }}
+        {{- if .Values.instanceSecret.caCert }}
+        - name: SSL_CERT_FILE
+          value: /etc/dvls-ca-cert/ca.crt
+        {{- end }}
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
           | default .Chart.AppVersion }}
         livenessProbe:
@@ -92,7 +100,22 @@ spec:
           }}
         securityContext: {{- toYaml .Values.controllerManager.manager.containerSecurityContext
           | nindent 10 }}
+        {{- if .Values.instanceSecret.caCert }}
+        volumeMounts:
+        - name: dvls-ca-cert
+          mountPath: /etc/dvls-ca-cert
+          readOnly: true
+        {{- end }}
       securityContext: {{- toYaml .Values.controllerManager.podSecurityContext | nindent
         8 }}
       serviceAccountName: {{ include "chart.fullname" . }}-controller-manager
       terminationGracePeriodSeconds: 10
+      {{- if .Values.instanceSecret.caCert }}
+      volumes:
+      - name: dvls-ca-cert
+        secret:
+          secretName: {{ include "chart.fullname" . }}-ca-cert
+          items:
+          - key: ca.crt
+            path: ca.crt
+      {{- end }}
