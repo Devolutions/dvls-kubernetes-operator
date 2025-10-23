@@ -104,6 +104,7 @@ $(HELMIFY): $(LOCALBIN)
 helm: manifests kustomize helmify ## Generate helm chart using helmify.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | $(HELMIFY)
+	./hack/add-ca-cert-to-helm.sh
 
 
 .PHONY: fmt
