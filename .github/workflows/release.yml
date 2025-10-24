@@ -91,7 +91,7 @@ jobs:
           path: helm-charts
 
       - name: Copy chart package
-        run: cp dvls-kubernetes-operator-*.tgz helm-charts/
+        run: cp dvls-kubernetes-operator-*.tgz helm-charts/dvls-kubernetes-operator
 
       - name: Update index
         working-directory: helm-charts
