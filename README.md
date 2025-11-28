@@ -1,4 +1,4 @@
-# dvls-kubernetes-operator
+# Kubernetes Operator for Devolutions Server
 :warning: **This operator is a work in progress, expect breaking changes between releases** :warning:
 
 Operator to sync Devolutions Server `Credential Entry` entries as Kubernetes Secrets
