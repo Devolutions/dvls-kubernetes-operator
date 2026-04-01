@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Check out ${{ github.repository }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check out Devolutions/actions
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: Devolutions/actions
           ref: v1
@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Check out devolutions/dvls-kubernetes-operator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -90,7 +90,7 @@ jobs:
 
     steps:
       - name: Check out dvls-kubernetes-operator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -99,7 +99,7 @@ jobs:
         run: helm package chart/
 
       - name: Check out helm-charts repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: Devolutions/helm-charts
           token: ${{ secrets.DEVOLUTIONSBOT_WRITE_TOKEN }}
