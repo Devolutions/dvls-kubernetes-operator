@@ -1,5 +1,8 @@
 # Kubernetes Operator for Devolutions Server
-:warning: **This operator is a work in progress, expect breaking changes between releases** :warning:
+> [!WARNING]
+> **This operator is deprecated and no longer maintained.**
+>
+> Devolutions Server is now supported natively by the [External Secrets Operator](https://github.com/external-secrets/external-secrets). See the [Devolutions documentation](https://docs.devolutions.net/pam/knowledge-base/knowledge-base-articles/external-secrets-operator) to get started and migrate.
 
 Operator to sync Devolutions Server `Credential Entry` entries as Kubernetes Secrets
 
